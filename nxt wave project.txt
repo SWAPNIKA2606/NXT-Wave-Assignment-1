@@ -1,0 +1,192 @@
+CREATE TABLE transactions (
+  id INTEGER PRIMARY KEY,
+  type TEXT NOT NULL,
+  amount REAL NOT NULL,
+  description TEXT NOT NULL,
+  date DATE NOT NULL,
+  running_balance REAL NOT NULL
+);
+
+// server.js
+const express = require('express');
+const sqlite3 = require('sqlite3').verbose();
+const app = express();
+const port = 3000;
+
+const db = new sqlite3.Database('./transactions.db');
+
+app.use(express.json());
+
+app.get('/transactions', (req, res) => {
+  db.all('SELECT * FROM transactions ORDER BY date DESC', (err, rows) => {
+    if (err) {
+      console.error(err);
+      res.status(500).send('Error fetching transactions');
+    } else {
+      res.json(rows);
+    }
+  });
+});
+
+app.post('/transactions', (req, res) => {
+  const { type, amount, description } = req.body;
+  const date = new Date();
+  const runningBalance = getRunningBalance();
+
+  db.run(`INSERT INTO transactions (type, amount, description, date, running_balance) VALUES (?, ?, ?, ?, ?)`, 
+    [type, amount, description, date, runningBalance], (err) => {
+    if (err) {
+      console.error(err);
+      res.status(500).send('Error creating transaction');
+    } else {
+      res.redirect('/transactions');
+    }
+  });
+});
+
+function getRunningBalance() {
+  let runningBalance = 0;
+  db.get('SELECT SUM(amount) AS total FROM transactions', (err, row) => {
+    if (err) {
+      console.error(err);
+    } else {
+      runningBalance = row.total;
+    }
+  });
+  return runningBalance;
+}
+
+app.listen(port, () => {
+  console.log(`Server started on port ${port}`);
+});
+
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Transaction System</title>
+  <style>
+    table {
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Transaction System</h1>
+  <table id="transactions-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Type</th>
+        <th>Amount</th>
+        <th>Description</th>
+        <th>Running Balance</th>
+      </tr>
+    </thead>
+    <tbody id="transactions-body">
+    </tbody>
+  </table>
+  <form id="add-transaction-form">
+    <label>
+      Type:
+      <select id="type" name="type">
+        <option value="credit">Credit</option>
+        <option value="debit">Debit</option>
+      </select>
+    </label>
+    <br />
+    <label>
+      Amount:
+      <input type="number" id="amount" name="amount" />
+    </label>
+    <br />
+    <label>
+      Description:
+      <input type="text" id="description" name="description" />
+    </label>
+    <br />
+    <button type="submit">Add Transaction</button>
+  </form>
+
+  <script src="script.js"></script>
+</body>
+</html>
+
+// script.js
+const transactionsTable = document.getElementById('transactions-table');
+const transactionsBody = document.getElementById('transactions-body');
+const addTransactionForm = document.getElementById('add-transaction-form');
+
+fetch('/transactions')
+  .then(response => response.json())
+  .then(transactions => {
+    transactions.forEach(transaction => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${transaction.date}</td>
+        <td>${transaction.type}</td>
+        <td>${transaction.amount}</td>
+        <td>${transaction.description}</td>
+        <td>${transaction.running_balance}</td>
+      `;
+      transactionsBody.appendChild(row)
+
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Transaction System</title>
+  <style>
+    table {
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Transaction System</h1>
+  <table id="transactions-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Type</th>
+        <th>Amount</th>
+        <th>Description</th>
+        <th>Running Balance</th>
+      </tr>
+    </thead>
+    <tbody id="transactions-body">
+    </tbody>
+  </table>
+  <form id="add-transaction-form">
+    <label>
+      Type:
+      <select id="type" name="type">
+        <option value="credit">Credit</option>
+        <option value="debit">Debit</option>
+      </select>
+    </label>
+    <br />
+    <label>
+      Amount:
+      <input type="number" id="amount" name="amount" />
+    </label>
+    <br />
+    <label>
+      Description:
+      <input type="text" id="description" name="description" />
+    </label>
+    <br />
+    <button type="submit">Add Transaction</button>
+  </form>
+
+  <script src="script.js"></script>
+</body>
+</html>
